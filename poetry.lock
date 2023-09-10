@@ -2,14 +2,14 @@
 
 [[package]]
 name = "actionweaver"
-version = "0.0.7"
+version = "0.0.8"
 description = "An Application Framework for Building LLM Agents"
 category = "main"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "actionweaver-0.0.7-py3-none-any.whl", hash = "sha256:63638f1392944c1b52fb5fbf9cb8a6f9a5f554838431ac84d0406ada193bb1f9"},
-    {file = "actionweaver-0.0.7.tar.gz", hash = "sha256:e3e20f190b606f46ab8d9688189a75bce1b39e74ecba761b613ef769ee062ddb"},
+    {file = "actionweaver-0.0.8-py3-none-any.whl", hash = "sha256:608fea4bfb9ec23ffbf43a428448ff40a1487a50d0582ff0f71ebf9880e8dc36"},
+    {file = "actionweaver-0.0.8.tar.gz", hash = "sha256:e2fea53a5536b1ae8c43bbf1f6b1443e3253684f0fdee17a2f4464389a9cdaf4"},
 ]
 
 [package.dependencies]
@@ -1665,14 +1665,14 @@ requests = ">=2,<3"
 
 [[package]]
 name = "llama-index"
-version = "0.8.22"
+version = "0.8.23.post1"
 description = "Interface between LLMs and your data"
 category = "main"
 optional = false
 python-versions = "*"
 files = [
-    {file = "llama_index-0.8.22-py3-none-any.whl", hash = "sha256:dd12c0047b0b937c6513d8b4fae7c0bded9ef4171bb19b26e11e76c85625846a"},
-    {file = "llama_index-0.8.22.tar.gz", hash = "sha256:d742486a0d507dbf9a1aad4a0b3a3be14f37366a4dc479b584609946485f6d36"},
+    {file = "llama_index-0.8.23.post1-py3-none-any.whl", hash = "sha256:01630c90bc5726bedd482f30c21215aa1922277fe46b4616f8c234cdc5da7308"},
+    {file = "llama_index-0.8.23.post1.tar.gz", hash = "sha256:5c7956b599ed0c0ee453bcc75abfcaec4ca77c996377eb0fc105220d193b692a"},
 ]
 
 [package.dependencies]
@@ -1681,6 +1681,7 @@ dataclasses-json = "*"
 fsspec = ">=2023.5.0"
 langchain = ">=0.0.262"
 nest-asyncio = "*"
+nltk = "*"
 numpy = "*"
 openai = ">=0.26.4"
 pandas = "*"
@@ -4148,4 +4149,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<4.0"
-content-hash = "f3eb8c9b94a7c841371c4bf11ecd6489647cfb209aa7e8d7d10cc860a5a42c27"
+content-hash = "96f9580585bada94a9476e6f21590915fea70f7f00c598fad3b6a329e106871b"

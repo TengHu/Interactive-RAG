@@ -1,4 +1,5 @@
 import os
+from enum import Enum
 from typing import List, Optional, Tuple
 
 import openai
@@ -6,6 +7,7 @@ from actionweaver import ActionHandlerMixin, RequireNext, SelectOne, action
 from actionweaver.llms.openai.chat import OpenAIChatCompletion
 from actionweaver.llms.openai.tokens import TokenUsageTracker
 from llama_index import (
+    Document,
     ServiceContext,
     SimpleDirectoryReader,
     SimpleWebPageReader,
@@ -15,6 +17,11 @@ from llama_index import (
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
+class GPT_Model(Enum):
+    GPT3 = "gpt-3.5-turbo"
+    GPT4 = "gpt-4"
+
+
 class RAGBot(ActionHandlerMixin):
     def __init__(self, logger, st):
         self.index = VectorStoreIndex.from_documents([])
@@ -22,25 +29,29 @@ class RAGBot(ActionHandlerMixin):
         self.st = st
         self.token_tracker = TokenUsageTracker(budget=3000, logger=logger)
         self.llm = OpenAIChatCompletion(
-            "gpt-4", token_usage_tracker=self.token_tracker, logger=logger
+            GPT_Model.GPT4.value, token_usage_tracker=self.token_tracker, logger=logger
         )
 
-        system_str = "You are a helpful assistant. Choose one of the following actions to get started: 'AnswerQuestion' or 'Read.' Please do not try to answer the question directly."
+        self.init_messages()
+
+    def init_messages(self):
+        system_str = "You are a helpful assistant. Please do not try to answer the question directly."
         self.messages = [{"role": "system", "content": system_str}]
 
     def __call__(self, query):
-        self.messages.append({"role": "user", "content": query})
+        self.messages.append(
+            {"role": "user", "content": query},
+        )
 
         return self.llm.create(
             self.messages,
             stream=True,
-            orch_expr=SelectOne(["AnswerQuestion", "Read"]),
         )
 
     @action(name="AnswerQuestion", stop=True)
     def answer_question(self, query: str):
         """
-        Answer a question.
+        Answer a question or search online.
 
         Parameters
         ----------
@@ -48,18 +59,7 @@ class RAGBot(ActionHandlerMixin):
             The query to be used for answering a question.
         """
 
-        context_query = self.llm.create(
-            [
-                {
-                    "role": "system",
-                    "content": "You are an assistant extracting key information from text",
-                },
-                {"role": "user", "content": f"Query : {query}"},
-            ],
-            orch_expr=RequireNext(["ExtractQueryForKB"]),
-        )
-
-        context_str = self.recall(context_query)
+        context_str = self.recall(query)
         context = (
             "Information from knowledge base:\n"
             "---\n"
@@ -70,27 +70,31 @@ class RAGBot(ActionHandlerMixin):
             "If you don't have information in the knowledge base, performs a Google search instead. Your Response:"
         )
 
-        response = self.llm.create(
+        return self.llm.create(
             [
                 {"role": "user", "content": context},
             ],
             orch_expr=SelectOne(["GoogleSearch"]),
         )
 
-        self.messages.append({"role": "assistant", "content": response})
-        return response
-
-    @action(name="ExtractQueryForKB", scope="kb", stop=True)
-    def extract_query_for_knowledge_base(self, kb_query: str):
+    @action(name="ExecuteInstruction", stop=True)
+    def execute_instruction(self, query: str):
         """
-        Extract a query for retrieving relevant information from the knowledge base.
+        Execute user instruction and provide an appropriate response.
+
+        e.g. translate the above text to French
 
         Parameters
         ----------
-        kb_query : str
-            The query to be used for retrieving information from the knowledge base.
+        query : str
+            The user's request or instruction to be executed.
         """
-        return kb_query
+
+        return self.llm.create(
+            self.messages,
+            stream=True,
+            orch_expr=SelectOne([]),
+        )
 
     @action(name="GoogleSearch", stop=True, scope="search")
     def search(self, query: str):
@@ -122,9 +126,10 @@ class RAGBot(ActionHandlerMixin):
 
         return f"Here are Google search results:\n\n{formatted_data}"
 
+    @action("Recall", stop=True)
     def recall(self, text):
         """
-        Recall from your knowledge base using the provided text and include sources.
+        Recall info from your knowledge base.
 
         Parameters
         ----------
@@ -137,6 +142,7 @@ class RAGBot(ActionHandlerMixin):
             A response containing relevant information retrieved from the knowledge base along with sources.
             If no information is found, it returns "No information on that topic."
         """
+
         query_engine = self.index.as_query_engine()
         response = query_engine.query(text)
 
@@ -144,7 +150,7 @@ class RAGBot(ActionHandlerMixin):
         for v in response.metadata.values():
             sources += v["source"]
 
-        sources = list(set(sources))
+        sources = list(set(sources)) if type(sources) == list else sources
 
         if response.response:
             return f"{response.response}\n\n[Source]: {sources}"
@@ -242,11 +248,37 @@ class RAGBot(ActionHandlerMixin):
             service_context = ServiceContext.from_defaults(chunk_size=512)
             documents = reader.load_data()
             for doc in documents:
-                doc.metadata = {
-                    "source": {"input_dir": input_dir, "input_files": input_files}
-                }
+                doc.metadata = {"source": input_dir or str(input_files)}
                 self.index.insert(doc, service_context=service_context)
         return f"Contents in files {[str(file) for file in reader.input_files]} have been successfully learned."
+
+    @action("Remember", stop=True)
+    def remember_convos_and_clear_messages(self, text_list: List[str]) -> str:
+        """
+        Remember contents from a list of text documents.
+
+        Parameters
+        ----------
+        text_list : List[str]
+            List of text documents to be stored.
+
+        Returns
+        -------
+        str
+            A message indicating that the contents have been successfully stored.
+        """
+
+        with self.st.spinner("Remembering ... "):
+            service_context = ServiceContext.from_defaults(chunk_size=512)
+            documents = [Document(text=t) for t in text_list]
+
+            for doc in documents:
+                doc.metadata = {"source": "previous conversation"}
+                self.index.insert(doc, service_context=service_context)
+
+            self.init_messages()
+
+        return "Contents have been successfully remembered."
 
 
 if __name__ == "__main__":

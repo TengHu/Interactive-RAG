@@ -4,7 +4,8 @@ import os
 import openai
 import streamlit as st
 from bot import RAGBot
-from streamlit_pills import pills
+
+st.set_page_config(layout="wide")
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 logging.basicConfig(
@@ -22,8 +23,7 @@ logger.setLevel(logging.DEBUG)
 @st.cache_resource
 def get_agent():
     logger.info("Loading RAG Bot ...")
-    agent = RAGBot(logger, st)
-    return agent
+    return RAGBot(logger, st)
 
 
 if __name__ == "__main__":
