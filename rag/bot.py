@@ -22,17 +22,32 @@ class RAGBot(ActionHandlerMixin):
         self.st = st
         self.token_tracker = TokenUsageTracker(budget=3000, logger=logger)
         self.llm = OpenAIChatCompletion(
-            "gpt-3.5-turbo", token_usage_tracker=self.token_tracker, logger=logger
+            "gpt-4", token_usage_tracker=self.token_tracker, logger=logger
         )
 
-        system_str = (
-            "You are a helpful assistant."
-            "Only answer based on information in the knowledge base."
-            "If you don't have information in the knowledge base, performs a Google search instead."
-        )
+        system_str = "You are a helpful assistant. Choose one of the following actions to get started: 'AnswerQuestion' or 'Read.' Please do not try to answer the question directly."
         self.messages = [{"role": "system", "content": system_str}]
 
     def __call__(self, query):
+        self.messages.append({"role": "user", "content": query})
+
+        return self.llm.create(
+            self.messages,
+            stream=True,
+            orch_expr=SelectOne(["AnswerQuestion", "Read"]),
+        )
+
+    @action(name="AnswerQuestion", stop=True)
+    def answer_question(self, query: str):
+        """
+        Answer a question.
+
+        Parameters
+        ----------
+        query : str
+            The query to be used for answering a question.
+        """
+
         context_query = self.llm.create(
             [
                 {
@@ -51,11 +66,19 @@ class RAGBot(ActionHandlerMixin):
             f"{context_str}\n"
             "---\n"
             f"User: {query}\n"
-            "Only answer question based on information from knowledge base. Your Response:"
+            "Only answer question based on information from knowledge base"
+            "If you don't have information in the knowledge base, performs a Google search instead. Your Response:"
         )
 
-        self.messages.append({"role": "user", "content": context})
-        return self.llm.create(self.messages, stream=True)
+        response = self.llm.create(
+            [
+                {"role": "user", "content": context},
+            ],
+            orch_expr=SelectOne(["GoogleSearch"]),
+        )
+
+        self.messages.append({"role": "assistant", "content": response})
+        return response
 
     @action(name="ExtractQueryForKB", scope="kb", stop=True)
     def extract_query_for_knowledge_base(self, kb_query: str):
@@ -69,7 +92,7 @@ class RAGBot(ActionHandlerMixin):
         """
         return kb_query
 
-    @action(name="GoogleSearch", stop=True)
+    @action(name="GoogleSearch", stop=True, scope="search")
     def search(self, query: str):
         """
         Perform a Google search and return query results with titles and links.

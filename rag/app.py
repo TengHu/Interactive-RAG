@@ -29,7 +29,7 @@ def get_agent():
 if __name__ == "__main__":
     agent = get_agent()
 
-    st.subheader("RAG Bot with Search Integration")
+    st.subheader("Interactive Retrieval Augmented Generation")
     user_input = st.text_input("You: ", placeholder="Ask me anything ...", key="input")
 
     if st.button("Submit", type="primary"):
