@@ -1,18 +1,17 @@
+# Interactive Retrieval Augmented Generation
 
+This demo app uses [ActionWeaver](https://github.com/TengHu/ActionWeaver/tree/main) to organize and orchestrate tools/functions from [Llama Index](https://www.llamaindex.ai/) and [LangChain](https://www.langchain.com/) to implement an interactive RAG bot.
 
+## Getting Started
 
+To run the RAG application
+
+```bash
 streamlit run rag/app.py
+```
 
-upload github
-README
-license
+## Contributing
+We welcome contributions from the open-source community.
 
-create a video: synergy of tools
-write text
-hashtag: langchain, llama index, rag, openai, openai function
-
-add a memorize method: memorize text
-
-What do you think is the best way to stop inflation? democrat and republican perspectives
-
-
+## License
+Apache License 2.0
