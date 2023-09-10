@@ -17,11 +17,6 @@ from llama_index import (
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
-class GPT_Model(Enum):
-    GPT3 = "gpt-3.5-turbo"
-    GPT4 = "gpt-4"
-
-
 class RAGBot(ActionHandlerMixin):
     def __init__(self, logger, st):
         self.index = VectorStoreIndex.from_documents([])
@@ -29,7 +24,9 @@ class RAGBot(ActionHandlerMixin):
         self.st = st
         self.token_tracker = TokenUsageTracker(budget=3000, logger=logger)
         self.llm = OpenAIChatCompletion(
-            GPT_Model.GPT4.value, token_usage_tracker=self.token_tracker, logger=logger
+            "gpt-3.5-turbo-16k-0613",
+            token_usage_tracker=self.token_tracker,
+            logger=logger,
         )
 
         self.init_messages()
@@ -37,6 +34,18 @@ class RAGBot(ActionHandlerMixin):
     def init_messages(self):
         system_str = "You are a helpful assistant. Please do not try to answer the question directly."
         self.messages = [{"role": "system", "content": system_str}]
+
+    def contains_url(self, text):
+        import re
+
+        # Regular expression pattern for matching URLs
+        url_pattern = r"https?://\S+|www\.\S+"
+
+        # Search for URLs in the input text
+        if re.search(url_pattern, text):
+            return True
+        else:
+            return False
 
     def __call__(self, query):
         self.messages.append(
@@ -153,21 +162,9 @@ class RAGBot(ActionHandlerMixin):
         sources = list(set(sources)) if type(sources) == list else sources
 
         if response.response:
-            return f"{response.response}\n\n[Source]: {sources}"
+            return f"{response.response}"
         else:
-            return "No information on that topic."
-
-    def contains_url(self, text):
-        import re
-
-        # Regular expression pattern for matching URLs
-        url_pattern = r"https?://\S+|www\.\S+"
-
-        # Search for URLs in the input text
-        if re.search(url_pattern, text):
-            return True
-        else:
-            return False
+            return "No information on this topic."
 
     @action("Read", stop=True)
     def read(self, sources: str):
