@@ -241,6 +241,3 @@ if __name__ == "__main__":
     logger.setLevel(logging.DEBUG)
 
     agent = RAGBot(logger, None)
-
-    agent.read_url(["https://en.wikipedia.org/wiki/Artificial_intelligence"])
-    print(agent.recall("What is artificial intelligence?"))
